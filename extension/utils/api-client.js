@@ -7,18 +7,30 @@ const DEFAULT_BACKEND_URL = 'http://localhost:8000';
 class AIDetectorAPI {
   constructor() {
     this.backendUrl = DEFAULT_BACKEND_URL;
+    this.apiKey = '';
     this._loadSettings();
   }
 
   async _loadSettings() {
     try {
-      const result = await chrome.storage.sync.get(['backendUrl']);
+      const result = await chrome.storage.sync.get(['backendUrl', 'apiKey']);
       if (result.backendUrl) {
         this.backendUrl = result.backendUrl;
+      }
+      if (result.apiKey) {
+        this.apiKey = result.apiKey;
       }
     } catch (error) {
       console.warn('Failed to load settings:', error);
     }
+  }
+
+  _getHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    if (this.apiKey) {
+      headers['X-API-Key'] = this.apiKey;
+    }
+    return headers;
   }
 
   /**
@@ -52,9 +64,7 @@ class AIDetectorAPI {
   async analyzeImage(imageBase64, sourceUrl, imageUrl = null) {
     const response = await fetch(`${this.backendUrl}/analyze`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: this._getHeaders(),
       body: JSON.stringify({
         image_base64: imageBase64,
         source_url: sourceUrl,
@@ -112,6 +122,10 @@ class AIDetectorAPI {
    */
   setBackendUrl(url) {
     this.backendUrl = url;
+  }
+
+  setApiKey(key) {
+    this.apiKey = key;
   }
 }
 

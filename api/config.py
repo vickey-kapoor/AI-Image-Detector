@@ -1,8 +1,9 @@
 """Configuration management for AI Image Detector API."""
 
-from pydantic_settings import BaseSettings
-from typing import List
 from functools import lru_cache
+from typing import List
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -12,8 +13,11 @@ class Settings(BaseSettings):
     api_host: str = "127.0.0.1"
     api_port: int = 8000
 
+    # Authentication
+    api_key: str = ""  # Empty string disables auth
+
     # CORS settings
-    cors_origins: str = "*"
+    cors_origins: str = "chrome-extension://*"
 
     # Rate limiting
     rate_limit_requests: int = 30
@@ -23,13 +27,12 @@ class Settings(BaseSettings):
     log_dir: str = "./logs"
     log_retention_days: int = 30
 
-    # Model settings (CLIP)
-    clip_model_name: str = "ViT-B-32"
-    clip_pretrained: str = "openai"
-
     # Cache settings
     cache_max_size: int = 100
     cache_ttl_seconds: int = 300
+
+    # Input validation
+    max_image_size_mb: int = 10
 
     @property
     def cors_origins_list(self) -> List[str]:

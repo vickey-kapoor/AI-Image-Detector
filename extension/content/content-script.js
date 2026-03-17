@@ -13,6 +13,7 @@
   // Settings cache
   let settings = {
     backendUrl: 'http://localhost:8000',
+    apiKey: '',
     autoScan: true,
     scanMinImageSize: 100,
     showOverlays: true
@@ -226,9 +227,14 @@
     try {
       const base64 = await imageToBase64(img);
 
+      const headers = { 'Content-Type': 'application/json' };
+      if (settings.apiKey) {
+        headers['X-API-Key'] = settings.apiKey;
+      }
+
       const response = await fetch(`${settings.backendUrl}/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           image_base64: base64,
           source_url: window.location.href,

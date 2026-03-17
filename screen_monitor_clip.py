@@ -3,21 +3,19 @@ AI Image Detection Screen Monitor
 Uses ViT-based classifier for AI image detection (94.2% accuracy)
 """
 
-import os
-import tkinter as tk
-from dotenv import load_dotenv
-import sys
-
-from modules.ai_detector import AIImageDetector
-from modules.screen_capture import ScreenCapture
-from modules.image_cache import ImageCache
-from modules.floating_ui import FloatingControlPanel
-from modules.overlay_window import OverlayWindow
-
 # Import monitor controller but we'll create a modified version
 import threading
 import time
+import tkinter as tk
+
+from dotenv import load_dotenv
 from PIL import Image
+
+from modules.ai_detector import AIImageDetector
+from modules.floating_ui import FloatingControlPanel
+from modules.image_cache import ImageCache
+from modules.overlay_window import OverlayWindow
+from modules.screen_capture import ScreenCapture
 
 
 class MonitorController:
@@ -185,11 +183,11 @@ class ScreenMonitor:
 
         try:
             self.overlay.destroy()
-        except:
+        except Exception:
             pass
         try:
             self.control_panel.window.destroy()
-        except:
+        except Exception:
             pass
 
         self.root.quit()

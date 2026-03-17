@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AI Image Detector",
   "version": "1.0.0",
-  "description": "Detect AI-generated images on web pages using SigLIP deepfake detection",
+  "description": "Detect AI-generated images on web pages using ViT-based AI image classification (94.2% accuracy)",
   "permissions": [
     "storage",
     "contextMenus",

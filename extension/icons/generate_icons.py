@@ -1,7 +1,9 @@
 """Generate extension icons."""
 
-from PIL import Image, ImageDraw
 import os
+
+from PIL import Image, ImageDraw
+
 
 def create_icon(size):
     """Create a simple AI detector icon at the specified size."""
@@ -22,11 +24,6 @@ def create_icon(size):
 
     # Draw inner "AI" text representation as stylized eye
     eye_size = circle_radius // 2
-    eye_padding = circle_radius // 3
-
-    # Draw eye shape (simplified detection icon)
-    eye_top = center - eye_size // 2
-    eye_bottom = center + eye_size // 2
 
     # Draw scanning lines
     line_color = (255, 255, 255, 200)

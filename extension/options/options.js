@@ -4,6 +4,7 @@
 
 const DEFAULT_SETTINGS = {
   backendUrl: 'http://localhost:8000',
+  apiKey: '',
   autoScan: true,
   scanMinImageSize: 100,
   showOverlays: true
@@ -23,6 +24,8 @@ async function loadSettings() {
 
     document.getElementById('backendUrl').value =
       settings.backendUrl || DEFAULT_SETTINGS.backendUrl;
+    document.getElementById('apiKey').value =
+      settings.apiKey || DEFAULT_SETTINGS.apiKey;
     document.getElementById('autoScan').checked =
       settings.autoScan !== undefined ? settings.autoScan : DEFAULT_SETTINGS.autoScan;
     document.getElementById('scanMinImageSize').value =
@@ -38,6 +41,7 @@ async function loadSettings() {
 async function saveSettings() {
   const settings = {
     backendUrl: document.getElementById('backendUrl').value.trim() || DEFAULT_SETTINGS.backendUrl,
+    apiKey: document.getElementById('apiKey').value.trim(),
     autoScan: document.getElementById('autoScan').checked,
     scanMinImageSize: parseInt(document.getElementById('scanMinImageSize').value) || DEFAULT_SETTINGS.scanMinImageSize,
     showOverlays: document.getElementById('showOverlays').checked
@@ -64,6 +68,7 @@ async function saveSettings() {
 
 async function resetSettings() {
   document.getElementById('backendUrl').value = DEFAULT_SETTINGS.backendUrl;
+  document.getElementById('apiKey').value = DEFAULT_SETTINGS.apiKey;
   document.getElementById('autoScan').checked = DEFAULT_SETTINGS.autoScan;
   document.getElementById('scanMinImageSize').value = DEFAULT_SETTINGS.scanMinImageSize;
   document.getElementById('showOverlays').checked = DEFAULT_SETTINGS.showOverlays;
