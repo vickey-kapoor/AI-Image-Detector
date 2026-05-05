@@ -64,7 +64,7 @@ All settings via environment variables (or `.env` file), defined in `api/config.
 - Images are resized to max 1024px before classification (constant `MAX_IMAGE_DIMENSION` in `modules/ai_detector.py`)
 - Verdict thresholds: `artificial > 0.6` → "Likely AI", `human > 0.6` → "Likely Real", else "Uncertain" (`modules/ai_detector.py:82-93`)
 - `/health`, `/stats`, and `/dashboard` are public; `/analyze*` endpoints require API key when `API_KEY` env var is set
-- Batch endpoint (`/analyze/batch`) consumes one rate-limit token per image, not per request (`api/server.py:285`)
+- Batch endpoint (`/analyze/batch`) consumes one rate-limit token per image atomically — if the full batch can't be served, no tokens are consumed and 429 is returned
 - Perceptual hashing (`imagehash`) for cache deduplication — similar images hit the same cache entry
 - Tests mock the HuggingFace pipeline to avoid downloading the model (see `tests/conftest.py` for shared fixtures)
 - pytest uses `asyncio_mode = "auto"` — async test functions run automatically without `@pytest.mark.asyncio`

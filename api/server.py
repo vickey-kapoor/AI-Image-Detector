@@ -314,20 +314,19 @@ async def analyze_batch(request: Request, body: BatchAnalyzeRequest):
     if not detector or not cache or not json_logger or not rate_limiter:
         raise HTTPException(status_code=503, detail="Service not ready")
 
-    # Rate limiting (costs N tokens for N images)
+    # Rate limiting (costs N tokens for N images — checked atomically to avoid partial consumption)
     client_ip = get_client_ip(request)
-    for _ in body.images:
-        if not rate_limiter.is_allowed(client_ip):
-            remaining = rate_limiter.get_remaining(client_ip)
-            reset_time = rate_limiter.get_reset_time(client_ip)
-            raise HTTPException(
-                status_code=429,
-                detail=f"Rate limit exceeded. Try again in {reset_time:.0f} seconds.",
-                headers={
-                    "X-RateLimit-Remaining": str(remaining),
-                    "X-RateLimit-Reset": str(int(reset_time))
-                }
-            )
+    if not rate_limiter.consume_n(client_ip, len(body.images)):
+        remaining = rate_limiter.get_remaining(client_ip)
+        reset_time = rate_limiter.get_reset_time(client_ip)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded. Try again in {reset_time:.0f} seconds.",
+            headers={
+                "X-RateLimit-Remaining": str(remaining),
+                "X-RateLimit-Reset": str(int(reset_time))
+            }
+        )
 
     async def process_one(item: AnalyzeRequest) -> AnalyzeResponse:
         try:
