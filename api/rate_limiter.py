@@ -56,14 +56,30 @@ class TokenBucketRateLimiter:
             bool: True if request is allowed, False if rate limited
         """
         with self._lock:
-            tokens = self._refill(client_id)
+            return self._consume(client_id, 1)
 
-            if tokens >= 1.0:
-                # Consume one token
-                self._buckets[client_id] = (tokens - 1.0, time.time())
-                return True
+    def consume_n(self, client_id: str, n: int) -> bool:
+        """
+        Atomically consume n tokens. Returns False without consuming any if
+        fewer than n tokens are available.
 
-            return False
+        Args:
+            client_id: Unique client identifier
+            n: Number of tokens to consume
+
+        Returns:
+            bool: True if n tokens were consumed, False if insufficient tokens
+        """
+        with self._lock:
+            return self._consume(client_id, n)
+
+    def _consume(self, client_id: str, n: int) -> bool:
+        """Consume n tokens if available. Must be called with self._lock held."""
+        tokens = self._refill(client_id)
+        if tokens >= n:
+            self._buckets[client_id] = (tokens - n, self._buckets[client_id][1])
+            return True
+        return False
 
     def get_remaining(self, client_id: str) -> int:
         """
@@ -81,15 +97,15 @@ class TokenBucketRateLimiter:
 
     def get_reset_time(self, client_id: str) -> float:
         """
-        Get seconds until bucket is fully refilled.
+        Get seconds until the next token becomes available.
 
         Args:
             client_id: Unique client identifier
 
         Returns:
-            float: Seconds until full refill
+            float: Seconds until 1 token is available
         """
         with self._lock:
             tokens = self._refill(client_id)
-            tokens_needed = self.max_tokens - tokens
+            tokens_needed = max(0.0, 1.0 - tokens)
             return tokens_needed / self.refill_rate if self.refill_rate > 0 else 0

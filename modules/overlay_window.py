@@ -1,6 +1,6 @@
+import threading
 import tkinter as tk
 import winsound
-import threading
 
 
 class OverlayWindow:
@@ -278,14 +278,14 @@ class OverlayWindow:
         if self.auto_hide_job:
             try:
                 self.overlay.after_cancel(self.auto_hide_job)
-            except:
+            except Exception:
                 pass
             self.auto_hide_job = None
 
         if self.overlay:
             try:
                 self.overlay.destroy()
-            except:
+            except Exception:
                 pass
             self.overlay = None
 

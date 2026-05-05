@@ -16,6 +16,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   // Set default settings
   const defaults = {
     backendUrl: DEFAULT_BACKEND_URL,
+    apiKey: '',
     autoScan: true,
     scanMinImageSize: 100,
     showOverlays: true
@@ -74,6 +75,7 @@ async function handleMessage(message, sender) {
     case 'getSettings':
       return chrome.storage.sync.get([
         'backendUrl',
+        'apiKey',
         'autoScan',
         'scanMinImageSize',
         'showOverlays'

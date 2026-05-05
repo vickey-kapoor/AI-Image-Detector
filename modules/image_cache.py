@@ -1,8 +1,9 @@
-import imagehash
-from PIL import Image
 import time
 from collections import OrderedDict
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+import imagehash
+from PIL import Image
 
 
 class ImageCache:

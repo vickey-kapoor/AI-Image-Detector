@@ -1,13 +1,11 @@
 """Structured JSON logging for AI Image Detector API."""
 
 import json
-import os
-import glob
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Dict, Any, Optional
 from threading import Lock
+from typing import Any, Dict, Optional
 
 
 class JSONLogger:
@@ -55,7 +53,7 @@ class JSONLogger:
 
     def _get_log_file_path(self) -> Path:
         """Get the path to the current day's log file."""
-        today = datetime.utcnow().strftime("%Y-%m-%d")
+        today = datetime.now(UTC).strftime("%Y-%m-%d")
 
         if self._current_date != today:
             self._current_date = today
@@ -65,13 +63,13 @@ class JSONLogger:
 
     def _cleanup_old_logs(self):
         """Remove log files older than retention_days."""
-        cutoff_date = datetime.utcnow() - timedelta(days=self.retention_days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=self.retention_days)
 
         for log_file in self.log_dir.glob("ai_detector_*.jsonl"):
             try:
                 # Extract date from filename
                 date_str = log_file.stem.replace("ai_detector_", "")
-                file_date = datetime.strptime(date_str, "%Y-%m-%d")
+                file_date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC)
 
                 if file_date < cutoff_date:
                     log_file.unlink()
@@ -104,7 +102,7 @@ class JSONLogger:
             image_url: Optional URL of the image itself
         """
         entry = {
-            "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+            "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
             "request_id": request_id,
             "image_hash": image_hash,
             "source_url": source_url,

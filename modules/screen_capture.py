@@ -1,6 +1,6 @@
+
 import mss
 from PIL import Image
-import io
 
 
 class ScreenCapture:

@@ -1,10 +1,13 @@
 """AI Image Detector using umm-maybe/AI-image-detector model (94.2% accuracy)"""
 
 import time
+from typing import Any, Dict
+
 import torch
-from transformers import pipeline
 from PIL import Image
-from typing import Dict, Any
+from transformers import pipeline
+
+MAX_IMAGE_DIMENSION = 1024
 
 
 class AIImageDetector:
@@ -31,6 +34,16 @@ class AIImageDetector:
 
         print("AI Image Detector model loaded successfully!")
 
+    @staticmethod
+    def _resize_if_needed(image: Image.Image) -> Image.Image:
+        """Resize oversized images before classification (ViT expects 224x224)."""
+        w, h = image.size
+        if w > MAX_IMAGE_DIMENSION or h > MAX_IMAGE_DIMENSION:
+            ratio = min(MAX_IMAGE_DIMENSION / w, MAX_IMAGE_DIMENSION / h)
+            new_size = (int(w * ratio), int(h * ratio))
+            image = image.resize(new_size, Image.LANCZOS)
+        return image
+
     def analyze_image(self, image: Image.Image) -> Dict[str, Any]:
         """
         Analyze an image to determine if it's AI-generated.
@@ -46,6 +59,9 @@ class AIImageDetector:
         # Ensure RGB
         if image.mode != 'RGB':
             image = image.convert('RGB')
+
+        # Resize oversized images
+        image = self._resize_if_needed(image)
 
         # Run classification
         results = self.classifier(image)
