@@ -1,208 +1,162 @@
 """
-AI Image Detection Screen Monitor
-Uses ViT-based classifier for AI image detection (94.2% accuracy)
+AI Image Detection - System Tray Monitor
+Runs silently in the background; notifies when AI-generated images are detected.
 """
-
-# Import monitor controller but we'll create a modified version
 import threading
 import time
-import tkinter as tk
 
+import pystray
 from dotenv import load_dotenv
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from modules.ai_detector import AIImageDetector
-from modules.floating_ui import FloatingControlPanel
 from modules.image_cache import ImageCache
-from modules.overlay_window import OverlayWindow
+from modules.notifier import Notifier
 from modules.screen_capture import ScreenCapture
 
 
-class MonitorController:
-    """Monitor controller using ViT AI detection"""
+def _make_tray_icon(color: str) -> Image.Image:
+    size = 64
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.ellipse([4, 4, size - 4, size - 4], fill=color)
+    try:
+        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 22)
+    except OSError:
+        font = ImageFont.load_default()
+    bbox = draw.textbbox((0, 0), "AI", font=font)
+    text_w, text_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    draw.text(((size - text_w) // 2, (size - text_h) // 2 - 2), "AI", fill="white", font=font)
+    return img
 
-    def __init__(self, detector, screen_capture, image_cache, overlay):
+
+_ICON_IDLE = _make_tray_icon("#607d8b")    # grey-blue = stopped
+_ICON_ACTIVE = _make_tray_icon("#27ae60")  # green = monitoring
+
+
+class MonitorController:
+    """Captures and analyses the screen on a background thread."""
+
+    _INTERVAL = 3  # seconds between captures
+
+    def __init__(self, detector, screen_capture, image_cache, notifier):
         self.detector = detector
         self.screen_capture = screen_capture
         self.image_cache = image_cache
-        self.overlay = overlay
-
+        self.notifier = notifier
         self._monitoring = False
-        self._monitor_thread = None
-        self._interval = 3
-        self.control_panel = None
+        self._thread = None
+        self.stats = {"total_captures": 0, "total_analyses": 0, "ai_detections": 0, "cache_hits": 0}
 
-        self.stats = {
-            'total_captures': 0,
-            'total_analyses': 0,
-            'ai_detections_count': 0,
-            'cache_hits': 0
-        }
-
-    def start_monitoring(self):
+    def start(self):
         if self._monitoring:
             return
         self._monitoring = True
-        self._monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
-        self._monitor_thread.start()
-        print("Monitoring started...")
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
 
-    def stop_monitoring(self):
+    def stop(self):
         self._monitoring = False
-        if self._monitor_thread:
-            self._monitor_thread.join(timeout=2)
-        print("Monitoring stopped.")
+        if self._thread:
+            self._thread.join(timeout=5)
 
-    def is_monitoring(self):
+    def is_running(self) -> bool:
         return self._monitoring
 
-    def _monitor_loop(self):
+    def _loop(self):
         while self._monitoring:
             try:
                 screenshot = self.screen_capture.capture_screen()
-                self.stats['total_captures'] += 1
+                self.stats["total_captures"] += 1
 
-                # Resize for processing
-                screenshot_small = screenshot.copy()
-                screenshot_small.thumbnail((512, 512), Image.Resampling.LANCZOS)
+                thumb = screenshot.copy()
+                thumb.thumbnail((512, 512), Image.Resampling.LANCZOS)
 
-                # Check cache
-                cached = self.image_cache.get(screenshot_small)
-                if cached:
-                    self.stats['cache_hits'] += 1
-                    time.sleep(self._interval)
+                if self.image_cache.get(thumb):
+                    self.stats["cache_hits"] += 1
+                    time.sleep(self._INTERVAL)
                     continue
 
-                # Analyze with AI detector
-                print(f"Analyzing capture #{self.stats['total_captures']}...")
-                result = self.detector.analyze_image(screenshot_small)
-                self.stats['total_analyses'] += 1
+                result = self.detector.analyze_image(thumb)
+                self.image_cache.set(thumb, result)
+                self.stats["total_analyses"] += 1
 
-                self.image_cache.set(screenshot_small, result)
-
-                is_ai = result.get('is_ai', False)
-                confidence = result.get('confidence', 0)
-                verdict = result.get('verdict', 'Unknown')
-
-                if is_ai:
-                    print(f"AI DETECTED! Confidence: {confidence*100:.0f}%")
-                    self.stats['ai_detections_count'] += 1
-                else:
-                    print(f"REAL IMAGE. Confidence: {confidence*100:.0f}%")
-
-                # Show overlay
-                self._show_result(is_ai, verdict, confidence)
+                if result.get("is_ai"):
+                    self.stats["ai_detections"] += 1
+                    self.notifier.ai_detected(result["verdict"], result["confidence"])
 
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"Monitor error: {e}")
 
-            time.sleep(self._interval)
-
-    def _show_result(self, is_ai, verdict, confidence):
-        try:
-            if self.overlay and self.overlay.root:
-                self.overlay.root.after(
-                    0,
-                    lambda: self.overlay.show_result(is_ai, verdict, confidence)
-                )
-        except Exception as e:
-            print(f"Overlay error: {e}")
-
-    def get_stats(self):
-        stats = self.stats.copy()
-        total = stats['total_analyses']
-        hits = stats['cache_hits']
-        stats['cache_hit_rate'] = (hits / (total + hits) * 100) if (total + hits) > 0 else 0
-        return stats
+            time.sleep(self._INTERVAL)
 
 
-class ScreenMonitor:
-    """Main application using ViT AI detection"""
+class SystemTrayApp:
+    """System tray application wrapping the monitor controller."""
 
     def __init__(self):
         load_dotenv()
+        print("Initialising AI Image Detector...")
 
-        self.root = tk.Tk()
-        self.root.withdraw()
-        self.root.title("AI Image Detector")
+        detector = AIImageDetector()
+        self.monitor = MonitorController(
+            detector=detector,
+            screen_capture=ScreenCapture(),
+            image_cache=ImageCache(max_size=50, ttl=300),
+            notifier=Notifier(),
+        )
+        self.icon = pystray.Icon(
+            "AI Image Detector",
+            icon=_ICON_IDLE,
+            title="AI Image Detector — Stopped",
+            menu=self._build_menu(),
+        )
 
-        print("=" * 50)
-        print("AI IMAGE DETECTOR")
-        print("=" * 50)
-        print("Using ViT model (94.2% accuracy)")
-        print("=" * 50)
+    def _build_menu(self) -> pystray.Menu:
+        return pystray.Menu(
+            pystray.MenuItem(
+                text=lambda _: "Stop Monitoring" if self.monitor.is_running() else "Start Monitoring",
+                action=self._toggle,
+                default=True,
+            ),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Show Stats", self._show_stats),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Quit", self._quit),
+        )
 
-        try:
-            # Initialize AI detector
-            print("\nInitializing detector...")
-            self.detector = AIImageDetector()
+    def _toggle(self, icon, item):
+        if self.monitor.is_running():
+            self.monitor.stop()
+            icon.icon = _ICON_IDLE
+            icon.title = "AI Image Detector — Stopped"
+        else:
+            self.monitor.start()
+            icon.icon = _ICON_ACTIVE
+            icon.title = "AI Image Detector — Monitoring"
 
-            # Initialize other components
-            self.screen_capture = ScreenCapture()
-            self.image_cache = ImageCache(max_size=50, ttl=300)
-            self.overlay = OverlayWindow(self.root)
+    def _show_stats(self, icon, item):
+        s = self.monitor.stats
+        total = s["total_analyses"]
+        hits = s["cache_hits"]
+        rate = hits / (total + hits) * 100 if (total + hits) > 0 else 0.0
+        Notifier().info(
+            "Session Stats",
+            f"Scans: {total}  |  AI detected: {s['ai_detections']}\n"
+            f"Cache hits: {hits}  |  Hit rate: {rate:.0f}%",
+        )
 
-            # Create monitor controller
-            self.monitor = MonitorController(
-                self.detector,
-                self.screen_capture,
-                self.image_cache,
-                self.overlay
-            )
-
-            # Create control panel
-            self.control_panel = FloatingControlPanel(self.root, self.monitor)
-            self.monitor.control_panel = self.control_panel
-
-            self.control_panel.window.protocol("WM_DELETE_WINDOW", self.on_closing)
-
-            print("\nReady! Click 'Start Monitoring' to begin.")
-            print("=" * 50)
-
-        except Exception as e:
-            print(f"Error: {e}")
-            self._show_error(str(e))
-
-    def _show_error(self, message):
-        from tkinter import messagebox
-        messagebox.showerror("Error", message)
-
-    def on_closing(self):
-        print("\nShutting down...")
-        if hasattr(self, 'monitor') and self.monitor.is_monitoring():
-            self.monitor.stop_monitoring()
-
-        stats = self.monitor.get_stats() if hasattr(self, 'monitor') else {}
-        print("\n" + "=" * 50)
-        print("SESSION SUMMARY")
-        print("=" * 50)
-        print(f"Total captures: {stats.get('total_captures', 0)}")
-        print(f"Total analyses: {stats.get('total_analyses', 0)}")
-        print(f"AI detections: {stats.get('ai_detections_count', 0)}")
-        print("=" * 50)
-
-        try:
-            self.overlay.destroy()
-        except Exception:
-            pass
-        try:
-            self.control_panel.window.destroy()
-        except Exception:
-            pass
-
-        self.root.quit()
-        self.root.destroy()
+    def _quit(self, icon, item):
+        self.monitor.stop()
+        icon.stop()
 
     def run(self):
-        try:
-            self.root.mainloop()
-        except KeyboardInterrupt:
-            self.on_closing()
+        print("Running in system tray. Right-click the tray icon to start monitoring or quit.")
+        self.icon.run()
 
 
 def main():
-    app = ScreenMonitor()
-    app.run()
+    SystemTrayApp().run()
 
 
 if __name__ == "__main__":

@@ -40,7 +40,7 @@ docker-compose up
 ## Architecture
 - **API** (`api/`): FastAPI server with rate limiting, caching, JSON logging. Endpoints: `/analyze`, `/analyze/batch`, `/analyze/url`, `/health`, `/stats`, `/dashboard`.
 - **Extension** (`extension/`): Chrome MV3 browser extension with auto-scan and visual overlays. Vanilla JS, no build step.
-- **Desktop** (`screen_monitor_clip.py` + `modules/`): Real-time screen capture analysis with Tkinter UI.
+- **Desktop** (`screen_monitor_clip.py` + `modules/`): Real-time screen capture analysis. Runs as a system tray app (`pystray`); sends Windows toast notifications (`plyer`) and plays a sound on AI detection.
 
 ### Request flow (API)
 1. Request hits `api/server.py` → API key auth via `X-API-Key` header (only `/analyze*` endpoints)
@@ -73,3 +73,4 @@ All settings via environment variables (or `.env` file), defined in `api/config.
 ## Known Tech Debt
 - Desktop monitor file still named `screen_monitor_clip.py` (legacy from CLIP migration)
 - Extension content script does direct fetch instead of routing through service worker
+- `pystray` on Windows requires `pywin32`; already present in `.venv` but not in `requirements.txt`
