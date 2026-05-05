@@ -3,10 +3,15 @@
 import asyncio
 import base64
 import io
+import ipaddress
 import logging
+import socket
 import uuid
 from contextlib import asynccontextmanager
 from typing import List, Optional
+from urllib.parse import urlparse
+
+import httpx
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -230,6 +235,35 @@ async def _analyze_single(image: Image.Image, source_url: str, image_url: Option
     )
 
 
+_ALLOWED_SCHEMES = {"http", "https"}
+
+
+async def _validate_url_ssrf(url: str) -> None:
+    """Raise 400 if the URL targets a private/reserved address (SSRF prevention)."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid URL")
+
+    if parsed.scheme not in _ALLOWED_SCHEMES:
+        raise HTTPException(status_code=400, detail="Only http and https URLs are allowed")
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(status_code=400, detail="Invalid URL: missing hostname")
+
+    try:
+        # Resolve in a thread — getaddrinfo is blocking
+        addr_infos = await asyncio.to_thread(socket.getaddrinfo, hostname, None)
+    except socket.gaierror:
+        raise HTTPException(status_code=400, detail=f"Could not resolve hostname: {hostname}")
+
+    for addr_info in addr_infos:
+        ip = ipaddress.ip_address(addr_info[4][0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            raise HTTPException(status_code=400, detail="URL resolves to a disallowed address")
+
+
 # --- Endpoints ---
 
 @app.post("/analyze", response_model=AnalyzeResponse, dependencies=[Depends(verify_api_key)])
@@ -313,7 +347,8 @@ async def analyze_url(request: Request, body: UrlAnalyzeRequest):
     Analyze an image by URL. Server fetches the image, avoiding client-side base64 encoding.
     """
     global detector, cache, json_logger, rate_limiter
-    import httpx
+
+    await _validate_url_ssrf(body.image_url)
 
     if not detector or not cache or not json_logger or not rate_limiter:
         raise HTTPException(status_code=503, detail="Service not ready")

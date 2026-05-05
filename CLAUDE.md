@@ -5,6 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Overview
 ViT-based AI image detector (94.2% accuracy) using the `umm-maybe/AI-image-detector` HuggingFace model. Three components: FastAPI backend, Chrome MV3 extension, and Tkinter desktop monitor.
 
+## Setup
+```bash
+# Install dev dependencies (includes pytest, ruff, httpx)
+pip install -r requirements-dev.txt
+```
+
+The model (`umm-maybe/AI-image-detector`) downloads ~400MB from HuggingFace on first startup and caches to `~/.cache/huggingface/`.
+
 ## Common Commands
 ```bash
 # Start API server (dev with auto-reload)
@@ -47,12 +55,16 @@ docker-compose up
 - API client wrapper in `extension/utils/api-client.js`
 
 ## Configuration
-All settings via environment variables (or `.env` file), defined in `api/config.py` using Pydantic Settings. See that file for defaults.
+All settings via environment variables (or `.env` file), defined in `api/config.py` using Pydantic Settings. Key non-obvious defaults:
+- `CORS_ORIGINS` defaults to `chrome-extension://*` — set to `http://localhost:*` or `*` for local/browser testing outside the extension
+- `RATE_LIMIT_REQUESTS=30` / `RATE_LIMIT_WINDOW_SECONDS=60` — per client IP, token bucket
 
 ## Development Conventions
 - Model inference uses `asyncio.to_thread()` — never call the classifier directly in an async handler
 - Images are resized to max 1024px before classification (constant `MAX_IMAGE_DIMENSION` in `modules/ai_detector.py`)
-- `/health` and `/stats` are public; `/analyze*` endpoints require API key when `API_KEY` env var is set
+- Verdict thresholds: `artificial > 0.6` → "Likely AI", `human > 0.6` → "Likely Real", else "Uncertain" (`modules/ai_detector.py:82-93`)
+- `/health`, `/stats`, and `/dashboard` are public; `/analyze*` endpoints require API key when `API_KEY` env var is set
+- Batch endpoint (`/analyze/batch`) consumes one rate-limit token per image, not per request (`api/server.py:285`)
 - Perceptual hashing (`imagehash`) for cache deduplication — similar images hit the same cache entry
 - Tests mock the HuggingFace pipeline to avoid downloading the model (see `tests/conftest.py` for shared fixtures)
 - pytest uses `asyncio_mode = "auto"` — async test functions run automatically without `@pytest.mark.asyncio`
