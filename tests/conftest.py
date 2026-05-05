@@ -8,6 +8,14 @@ from PIL import Image
 from modules.ai_detector import AIImageDetector
 
 
+def pytest_addoption(parser):
+    parser.addoption("--real-model", action="store_true", default=False, help="Run tests against the real HuggingFace model")
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "real_model: requires --real-model flag and HuggingFace model download")
+
+
 @pytest.fixture
 def sample_image():
     """Create a simple RGB test image."""
