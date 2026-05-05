@@ -12,7 +12,6 @@ from typing import List, Optional
 from urllib.parse import urlparse
 
 import httpx
-
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
