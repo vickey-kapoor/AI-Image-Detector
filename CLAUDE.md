@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Overview
-ViT-based AI image detector (94.2% accuracy) using the `umm-maybe/AI-image-detector` HuggingFace model. Three components: FastAPI backend, Chrome MV3 extension, and Tkinter desktop monitor.
+ViT-based AI image detector (94.2% accuracy) using the `umm-maybe/AI-image-detector` HuggingFace model. Three components: FastAPI backend, Chrome MV3 extension, and system tray desktop monitor.
 
 ## Setup
 ```bash
