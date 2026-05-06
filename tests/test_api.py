@@ -106,6 +106,23 @@ class TestStatsEndpoint:
         assert "cache_hit_rate" in data
 
 
+class TestDashboardEndpoint:
+    def test_dashboard_returns_200(self, mock_env_no_auth, monkeypatch):
+        client = _create_app(monkeypatch)
+        resp = client.get("/dashboard")
+        assert resp.status_code == 200
+
+    def test_dashboard_returns_html(self, mock_env_no_auth, monkeypatch):
+        client = _create_app(monkeypatch)
+        resp = client.get("/dashboard")
+        assert "text/html" in resp.headers["content-type"]
+
+    def test_dashboard_no_auth_required(self, mock_env_with_auth, monkeypatch):
+        client = _create_app(monkeypatch)
+        resp = client.get("/dashboard")
+        assert resp.status_code == 200
+
+
 class TestAnalyzeEndpoint:
     def test_analyze_valid_image(self, mock_env_no_auth, monkeypatch):
         client = _create_app(monkeypatch)
