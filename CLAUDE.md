@@ -73,4 +73,3 @@ All settings via environment variables (or `.env` file), defined in `api/config.
 ## Known Tech Debt
 - Desktop monitor file still named `screen_monitor_clip.py` (legacy from CLIP migration)
 - Extension content script does direct fetch instead of routing through service worker
-- `pystray` on Windows requires `pywin32`; already present in `.venv` but not in `requirements.txt`
