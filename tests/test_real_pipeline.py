@@ -12,7 +12,6 @@ from PIL import Image, ImageDraw
 from modules.ai_detector import AIImageDetector
 
 
-
 @pytest.fixture(scope="module")
 def real_detector(request):
     if not request.config.getoption("--real-model"):
