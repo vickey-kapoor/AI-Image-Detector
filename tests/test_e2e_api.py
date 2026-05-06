@@ -116,3 +116,82 @@ class TestE2EAnalyze:
             "source_url": "https://example.com",
         })
         assert resp.status_code == 400
+
+
+class TestE2EBatch:
+    def test_batch_returns_200(self, real_api_client):
+        resp = real_api_client.post("/analyze/batch", json={
+            "images": [
+                {"image_base64": _b64_image(color=(10, 20, 30)), "source_url": "https://example.com"},
+                {"image_base64": _b64_image(color=(40, 50, 60)), "source_url": "https://example.com"},
+            ]
+        })
+        assert resp.status_code == 200
+
+    def test_batch_returns_correct_count(self, real_api_client):
+        images = [
+            {"image_base64": _b64_image(color=(i * 30, i * 20, i * 10)), "source_url": "https://example.com"}
+            for i in range(1, 4)
+        ]
+        data = real_api_client.post("/analyze/batch", json={"images": images}).json()
+        assert len(data["results"]) == 3
+
+    def test_batch_each_result_has_valid_verdict(self, real_api_client):
+        images = [
+            {"image_base64": _b64_image(color=(70, 80, 90)), "source_url": "https://example.com"},
+            {"image_base64": _b64_image(color=(100, 110, 120)), "source_url": "https://example.com"},
+        ]
+        data = real_api_client.post("/analyze/batch", json={"images": images}).json()
+        for result in data["results"]:
+            assert result["verdict"] in VALID_VERDICTS
+
+    def test_batch_each_result_probabilities_sum_to_one(self, real_api_client):
+        images = [
+            {"image_base64": _b64_image(color=(130, 140, 150)), "source_url": "https://example.com"},
+            {"image_base64": _b64_image(color=(160, 170, 180)), "source_url": "https://example.com"},
+        ]
+        data = real_api_client.post("/analyze/batch", json={"images": images}).json()
+        for result in data["results"]:
+            assert abs(result["fake_probability"] + result["real_probability"] - 1.0) < 0.01
+
+    def test_batch_empty_returns_422(self, real_api_client):
+        resp = real_api_client.post("/analyze/batch", json={"images": []})
+        assert resp.status_code == 422
+
+    def test_batch_over_limit_returns_422(self, real_api_client):
+        images = [
+            {"image_base64": _b64_image(), "source_url": "https://example.com"}
+            for _ in range(11)
+        ]
+        resp = real_api_client.post("/analyze/batch", json={"images": images})
+        assert resp.status_code == 422
+
+
+class TestE2EAnalyzeUrl:
+    def test_url_private_ip_returns_400(self, real_api_client):
+        resp = real_api_client.post("/analyze/url", json={
+            "image_url": "http://192.168.1.1/image.jpg",
+            "source_url": "https://example.com",
+        })
+        assert resp.status_code == 400
+
+    def test_url_localhost_returns_400(self, real_api_client):
+        resp = real_api_client.post("/analyze/url", json={
+            "image_url": "http://localhost/image.jpg",
+            "source_url": "https://example.com",
+        })
+        assert resp.status_code == 400
+
+    def test_url_invalid_scheme_returns_400(self, real_api_client):
+        resp = real_api_client.post("/analyze/url", json={
+            "image_url": "ftp://example.com/image.jpg",
+            "source_url": "https://example.com",
+        })
+        assert resp.status_code == 400
+
+    def test_url_unreachable_host_returns_400(self, real_api_client):
+        resp = real_api_client.post("/analyze/url", json={
+            "image_url": "http://this-host-does-not-exist.invalid/image.jpg",
+            "source_url": "https://example.com",
+        })
+        assert resp.status_code == 400
