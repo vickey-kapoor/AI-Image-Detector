@@ -1,7 +1,6 @@
 """Tests for MonitorController in screen_monitor_clip.py."""
 
 import sys
-import time
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
@@ -105,8 +104,6 @@ class TestMonitorControllerLoop:
     def _run_one_iteration(self, controller):
         """Run the loop for one iteration then stop."""
         call_count = 0
-
-        original_sleep = time.sleep
 
         def fake_sleep(n):
             nonlocal call_count
