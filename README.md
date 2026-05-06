@@ -35,7 +35,7 @@ python -m uvicorn api.server:app --host 127.0.0.1 --port 8000
 
 ```bash
 pip install -r requirements.txt
-python screen_monitor_clip.py
+python screen_monitor.py
 ```
 
 The app runs silently in the system tray (no window). Right-click the tray icon to start/stop monitoring, view session stats, or quit. The icon turns green while monitoring. A toast notification and alert sound fire whenever an AI-generated screen image is detected.
@@ -170,7 +170,7 @@ pytest tests/ -v --real-model
 │   └── screen_capture.py  # MSS screen capture
 │
 ├── tests/                 # pytest suite (70 tests)
-├── screen_monitor_clip.py # Desktop system tray entry point
+├── screen_monitor.py # Desktop system tray entry point
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt

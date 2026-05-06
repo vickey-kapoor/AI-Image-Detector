@@ -1,4 +1,4 @@
-"""Tests for MonitorController in screen_monitor_clip.py."""
+"""Tests for MonitorController in screen_monitor.py."""
 
 import sys
 from types import ModuleType
@@ -8,7 +8,7 @@ import pytest
 from PIL import Image
 
 # pystray requires a running Windows desktop session which is not available in
-# test environments. Stub it out before importing screen_monitor_clip so the
+# test environments. Stub it out before importing screen_monitor so the
 # module-level icon creation doesn't fail.
 _pystray_stub = ModuleType("pystray")
 _pystray_stub.Icon = MagicMock()
@@ -16,7 +16,7 @@ _pystray_stub.Menu = MagicMock()
 _pystray_stub.MenuItem = MagicMock()
 sys.modules.setdefault("pystray", _pystray_stub)
 
-from screen_monitor_clip import MonitorController  # noqa: E402
+from screen_monitor import MonitorController  # noqa: E402
 
 
 @pytest.fixture
@@ -72,19 +72,19 @@ class TestMonitorControllerState:
         assert controller.is_running() is False
 
     def test_start_sets_running(self, controller):
-        with patch("screen_monitor_clip.time.sleep"):
+        with patch("screen_monitor.time.sleep"):
             controller.start()
             assert controller.is_running() is True
             controller.stop()
 
     def test_stop_clears_running(self, controller):
-        with patch("screen_monitor_clip.time.sleep"):
+        with patch("screen_monitor.time.sleep"):
             controller.start()
             controller.stop()
             assert controller.is_running() is False
 
     def test_double_start_does_not_spawn_extra_thread(self, controller):
-        with patch("screen_monitor_clip.time.sleep"):
+        with patch("screen_monitor.time.sleep"):
             controller.start()
             thread = controller._thread
             controller.start()  # second call should be a no-op
@@ -111,7 +111,7 @@ class TestMonitorControllerLoop:
             if call_count >= 1:
                 controller._monitoring = False
 
-        with patch("screen_monitor_clip.time.sleep", side_effect=fake_sleep):
+        with patch("screen_monitor.time.sleep", side_effect=fake_sleep):
             controller.start()
             controller._thread.join(timeout=3)
 
@@ -180,7 +180,7 @@ class TestMonitorControllerLoop:
 
         mock_screen_capture.capture_screen.side_effect = flaky_capture
 
-        with patch("screen_monitor_clip.time.sleep"):
+        with patch("screen_monitor.time.sleep"):
             controller.start()
             controller._thread.join(timeout=3)
 
