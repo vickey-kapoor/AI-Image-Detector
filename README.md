@@ -1,6 +1,9 @@
 # AI Image Detector
 
-Detect AI-generated images using a ViT-based classifier with **94.2% accuracy**. Three modes of use: a **FastAPI backend**, a **Chrome extension**, and a **desktop system tray monitor**.
+[![CI](https://github.com/vickey-kapoor/AI-Image-Detector/actions/workflows/ci.yml/badge.svg)](https://github.com/vickey-kapoor/AI-Image-Detector/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Detect AI-generated images using a ViT-based classifier (**94.2% accuracy** per the model card). Three modes of use: a **FastAPI backend**, a **Chrome extension**, and a **desktop system tray monitor**.
 
 ## Features
 
@@ -35,7 +38,7 @@ python -m uvicorn api.server:app --host 127.0.0.1 --port 8000
 
 ```bash
 pip install -r requirements.txt
-python screen_monitor_clip.py
+python screen_monitor.py
 ```
 
 The app runs silently in the system tray (no window). Right-click the tray icon to start/stop monitoring, view session stats, or quit. The icon turns green while monitoring. A toast notification and alert sound fire whenever an AI-generated screen image is detected.
@@ -169,8 +172,8 @@ pytest tests/ -v --real-model
 │   ├── notifier.py        # Toast notifications + alert sound (plyer + winsound)
 │   └── screen_capture.py  # MSS screen capture
 │
-├── tests/                 # pytest suite (70 tests)
-├── screen_monitor_clip.py # Desktop system tray entry point
+├── tests/                 # pytest suite (83 tests)
+├── screen_monitor.py      # Desktop system tray entry point
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -184,7 +187,7 @@ pytest tests/ -v --real-model
 Uses [umm-maybe/AI-image-detector](https://huggingface.co/umm-maybe/AI-image-detector):
 
 - **Architecture**: Vision Transformer (ViT/Swin)
-- **Accuracy**: 94.2%
+- **Accuracy**: 94.2% (reported on the model card; not independently evaluated here)
 - **Labels**: `artificial` (AI-generated) / `human` (real photograph)
 - **Verdict thresholds**: score > 0.6 → confident verdict; otherwise "Uncertain"
 - **First run**: downloads ~400 MB to `~/.cache/huggingface/`
@@ -208,4 +211,4 @@ Uses [umm-maybe/AI-image-detector](https://huggingface.co/umm-maybe/AI-image-det
 
 ## License
 
-MIT
+[MIT](LICENSE)
